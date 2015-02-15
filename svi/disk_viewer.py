@@ -40,7 +40,8 @@ def show_files(disk):
     ref_tracks[0] = ref_tracks[1] = ref_tracks[2] = ref_tracks[20] = True
     for file in files:
         for trk_no in file.tracks:
-            ref_tracks[trk_no] = True
+            if trk_no >= 0 and trk_no < disk.no_tracks():
+                ref_tracks[trk_no] = True
 
 
     has_deletes = False
@@ -65,7 +66,7 @@ def show_files(disk):
     for file in files:
         if file.deleted:
             continue
-        print '%-11s %s %5d bytes   Tracks: %s' % (file.filename, file.attr, file.size, file.tracks)
+        print '%-11s %s %5d bytes   Tracks: %s' % (file.displayname, file.attr, file.size, file.tracks)
     print
 
     if has_deletes:
@@ -85,7 +86,7 @@ def show_files(disk):
                 if used_deleted[trk] > 1:
                     status = 'Data may be overwritten'
 
-            print '%-11s %s %5d bytes   Tracks: %-15s Status: %s' % (file.filename, file.attr, file.size, file.tracks, status)
+            print '%-11s %s %5d bytes   Tracks: %-15s Status: %s' % (file.displayname, file.attr, file.size, file.tracks, status)
         print
 
     for trk_no in range(0, disk.no_tracks()):

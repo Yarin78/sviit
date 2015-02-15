@@ -82,10 +82,10 @@ class Disk:
         return dat[1:].split("\0", 1)[0]
 
     def get_files(self):
-        return [f for f in self._get_all_files() if not f.deleted]
+        return [f for f in self.get_all_files() if not f.deleted]
 
     def get_deleted_files(self):
-        return [f for f in self._get_all_files() if f.deleted]
+        return [f for f in self.get_all_files() if f.deleted]
 
     def _get_directory(self):
         dir_track = self.tracks[20]
@@ -136,6 +136,19 @@ class Disk:
 
         self._write_directory(directory=directory, fat=fat)
 
+    def get_file(self, filename):
+        for f in self.get_files():
+            if f.filename == filename:
+                return f
+        return None
+
+    def read_file(self, file):
+        if type(file) is str:
+            file = self.get_file(file)
+        if not file:
+            raise Exception('File not found')
+
+        return ''.join([self.tracks[trk] for trk in file.tracks])[:file.size]
 
     def get_all_files(self):
         directory, dat, fat = self._get_directory()
@@ -147,32 +160,14 @@ class Disk:
             if ord(entry[0]) == 255:
                 end_reached = True
                 continue
-            file_type = ord(entry[9])
-            pattr = " "
-            rattr = " "
-            if file_type & 0x10:
-                pattr = "P"
-                file_type -= 0x10
-            if file_type & 0x40:
-                rattr = "R"
-                file_type -= 0x40
-            delim = ' '
-            if file_type == 0x00:
-                delim = ' '
-            elif file_type == 0x01:
-                delim = '*'
-            elif file_type == 0x80:
-                delim = '.'
-            elif file_type == 0xA0:
-                delim = '#'
-            else:
-                delim = '?'
-            filename = "%s%s%s" % (entry[0:6], delim, entry[6:9])
+
+            filename = entry[0:9]
             is_deleted = False
             if ord(filename[0]) == 0:
                 filename = "?%s" % filename[1:]
                 is_deleted = True
 
+            file_type = ord(entry[9])
             fat_ptr = ord(entry[10])
 
             file_tracks = []
@@ -190,17 +185,42 @@ class Disk:
             else:
                 file_size = -1
 
-            files.append(File(filename, file_size, "%c%c" % (pattr, rattr), is_deleted or end_reached, file_tracks, i))
+            files.append(File(filename, file_type, file_size, is_deleted or end_reached, file_tracks, i))
         return files
 
 
 
 
 class File:
-    def __init__(self, filename, size, attr, deleted, tracks, index_position):
-        self.filename = filename
+    def __init__(self, filename, type, size, deleted, tracks, index_position):
+        self.filename = filename.strip()
+        self.type = type
         self.size = size
-        self.attr = attr
         self.deleted = deleted
         self.tracks = tracks
         self.index_position = index_position
+
+        pattr = " "
+        rattr = " "
+        if type & 0x10:
+            pattr = "P"
+            type -= 0x10
+        if type & 0x40:
+            rattr = "R"
+            type -= 0x40
+        delim = ' '
+        if type == 0x00:
+            delim = ' '
+        elif type == 0x01:
+            delim = '*'
+        elif type == 0x80:
+            delim = '.'
+        elif type == 0xA0:
+            delim = '#'
+        else:
+            delim = '?'
+        self.displayname = "%s%s%s" % (filename[0:6], delim, filename[6:9])
+        self.attr = "%c%c" % (pattr, rattr)
+
+    def is_basic_file(self):
+        return (self.type & 0xA1) == 0x80
