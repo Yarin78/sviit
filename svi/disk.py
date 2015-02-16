@@ -19,6 +19,16 @@ class Disk:
     def no_tracks(self):
         return len(self.tracks)
 
+    def has_fat(self):
+        dir_track = self.tracks[20]
+        fats = [dir_track[14*256:15*256], dir_track[15*256:16*256], dir_track[16*256:17*256]]
+
+        for fat in fats:
+            if ord(fat[0]) != 254 or ord(fat[1]) != 254 or ord(fat[2]) != 254 or ord(fat[20]) != 254:
+                return False
+
+        return True
+
     def track_contains_data(self, track_no):
         # Returns 0 if no data (just one value)
         # Returns -1 if probably no data (at most 4 different values)
@@ -148,7 +158,17 @@ class Disk:
         if not file:
             raise Exception('File not found')
 
-        return ''.join([self.tracks[trk] for trk in file.tracks])[:file.size]
+        data = ""
+        for trk in file.tracks:
+            if trk < 0 or trk >= len(self.tracks):
+                logging.warning('File %s is stored on track %d which doesn''t exist' % (file.displayname, trk))
+                break
+            data += self.tracks[trk]
+
+        data = data[:file.size]
+        return data
+
+        #return ''.join([self.tracks[trk] for trk in file.tracks])[:file.size]
 
     def get_all_files(self):
         directory, dat, fat = self._get_directory()

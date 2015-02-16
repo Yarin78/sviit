@@ -31,11 +31,18 @@ def detokenize(bytes):
             # TODO: Warn if remaining bytes
             break
         next_row -= 32769  # Program is loaded into 0x8001
+        if next_row < pos+4:
+            lines.append("*** UNEXPECTED EOF")
+            logging.warning("Invalid line pointer, aborting tokenizing")
+            break
         lines.append(detokenize_line(bytes[pos+2:next_row]))
         pos = next_row
     return lines
 
 def detokenize_line(bytes):
+    if len(bytes) < 2:
+        logging.warning("Line less than two bytes, skipping")
+        return "*** UNEXPECTED EOL"
     line_number = read_word(bytes, 0)
     #print ["%02x" % x for x in bytes]
 
@@ -85,13 +92,15 @@ def detokenize_line(bytes):
             else:
                 s = TOKENS[token]
                 if len(s) == 0:
-                    raise Exception("Unknown token %d on line number %d" % (bytes[pos], line_number))
+                    raise Exception("Unknown token %d on line number %d" % (token, line_number))
                 else:
                     line += TOKENS[token]
 
     if pos >= len(bytes):
+        line += " *** BUFFER ENDED PREMATURELY"
         logging.warning("Buffer ended before EOL token on line number %d" % line_number)
     elif pos + 1 != len(bytes):
+        line += " *** GOT EOL BUT BUFFER NOT EMPTY"
         logging.warning("Got EOL token on line number %d but not end of buffer" % line_number)
 
     #print line
@@ -113,7 +122,7 @@ TOKENS = [
     'BEEP', 'PLAY', 'SET', 'PRESET', 'SOUND', 'SCREEN', 'VPOKE', 'KEY', 'CLICK', 'SWITCH', 'MAX', 'MON', 'MOTO', 'BLOAD', 'BSAVE', 'MDM',
     'DIAL', 'DKSO$', 'SET', 'NAME', 'KILL', 'IPL', 'COPY', 'CMD', 'LOCATE', 'TO', 'THEN', 'TAB(', 'STEP', 'USR', 'FN', 'SPC(',
     'NOT', 'ERL', 'ERR', 'STRING$', 'USING', 'INSTR', '', 'VARPTR', 'CSRLIN', 'ATTR$', 'DSKI$', 'OFF', 'INKEY$', 'POINT', 'SPRITE', 'TIME',
-    '>', '=', '<', '+', '-', '*', '/', '^', 'AND', 'OR', 'XOR', 'EQV', 'IMP', 'MOD', '', ''
+    '>', '=', '<', '+', '-', '*', '/', '^', 'AND', 'OR', 'XOR', 'EQV', 'IMP', 'MOD', '\\', ''
 ]
 
 def main():
