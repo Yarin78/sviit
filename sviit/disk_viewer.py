@@ -1,11 +1,12 @@
 import logging
+from sviit.util import str_to_swechar
 import sys
 
-from disk import Disk
+from sviit.disk import Disk
 
 def show_track_usage(disk):
     side2_has_data = False
-    print "Track usage: ",
+    print("Track usage: ",)
     for trk_no in range(0, disk.no_tracks()):
         cd = disk.track_contains_data(trk_no)
         if cd == 0:
@@ -16,21 +17,21 @@ def show_track_usage(disk):
             sys.stdout.write('#')
         if trk_no >= 40 and cd != 0:
             side2_has_data = True
-    print
+    print()
     if side2_has_data:
-        print "Side 2 has data!"
+        print("Side 2 has data!")
 
 def show_boot_track(disk):
     track = disk.tracks[0]
-    print "Boot track:",
-    if "Disk version" in track:
-        print "Disk Basic"
+    print("Boot track:",)
+    if b"Disk version" in track:
+        print("Disk Basic")
     elif disk.track_contains_data(0):
-        print "Unknown data"
+        print("Unknown data")
     else:
-        print "Empty"
+        print("Empty")
 
-def show_files(disk):
+def show_files(disk, swechars=False):
     files = disk.get_all_files()
 
     used_existing = [0] * disk.no_tracks()
@@ -61,17 +62,17 @@ def show_files(disk):
         if used_existing[x] >= 2:
             logging.warning('Multiple existing files uses same track!?')
 
-    print 'FILES'
-    print '-----'
+    print('FILES')
+    print('-----')
     for file in files:
         if file.deleted:
             continue
-        print '%-11s %s %5d bytes   Tracks: %s' % (file.displayname, file.attr, file.size, file.tracks)
-    print
+        print('%-11s %s %5d bytes   Tracks: %s' % (str_to_swechar(file.displayname), file.attr, file.size, file.tracks))
+    print()
 
     if has_deletes:
-        print 'DELETED FILES'
-        print '-------------'
+        print('DELETED FILES')
+        print('-------------')
         for file in files:
             if not file.deleted:
                 continue
@@ -86,23 +87,23 @@ def show_files(disk):
                 if used_deleted[trk] > 1:
                     status = 'Data may be overwritten'
 
-            print '%-11s %s %5d bytes   Tracks: %-15s Status: %s' % (file.displayname, file.attr, file.size, file.tracks, status)
-        print
+            print('%-11s %s %5d bytes   Tracks: %-15s Status: %s' % (file.displayname, file.attr, file.size, file.tracks, status))
+        print()
 
     for trk_no in range(0, disk.no_tracks()):
         if disk.track_contains_data(trk_no) and not ref_tracks[trk_no]:
-            print 'Track %d contains data but is not referenced in FAT!' % trk_no
+            print('Track %d contains data but is not referenced in FAT!' % trk_no)
 
-def main():
-    disk = Disk(sys.argv[1])
+def show(filename, swechars=False):
+    disk = Disk(filename)
     show_track_usage(disk)
-    print
+    print()
     show_boot_track(disk)
-    print
-    print 'Disk attributes: %s' % disk.get_disk_attributes()
-    print 'IPL: %s' % disk.get_ipl_command()
-    print
-    show_files(disk)
+    print()
+    print('Disk attributes: %s' % disk.get_disk_attributes())
+    print('IPL: %s' % disk.get_ipl_command())
+    print()
+    show_files(disk, swechars)
 
 if __name__ == "__main__":
-    main()
+    show(sys.argv[1])

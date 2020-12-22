@@ -1,5 +1,6 @@
 import logging
-from disk import Disk
+from sviit.disk import Disk
+from sviit import util
 
 def read_word(bytes, pos):
     return bytes[pos] + bytes[pos+1] * 256
@@ -17,7 +18,7 @@ def read_float(bytes):
 def format_float(num):
     return "%.14g" % num
 
-def detokenize(bytes):
+def detokenize(bytes, swechars=False):
     if type(bytes) is str:
         bytes = [ord(x) for x in bytes]
     lines = []
@@ -35,11 +36,11 @@ def detokenize(bytes):
             lines.append("*** UNEXPECTED EOF")
             logging.warning("Invalid line pointer, aborting tokenizing")
             break
-        lines.append(detokenize_line(bytes[pos+2:next_row]))
+        lines.append(detokenize_line(bytes[pos+2:next_row], swechars))
         pos = next_row
     return lines
 
-def detokenize_line(bytes):
+def detokenize_line(bytes, swechars=False):
     if len(bytes) < 2:
         logging.warning("Line less than two bytes, skipping")
         return "*** UNEXPECTED EOL"
@@ -52,7 +53,10 @@ def detokenize_line(bytes):
         token = bytes[pos]
         pos += 1
         if token >= 32 and token < 127:
-            line += chr(token)
+            if swechars:
+                line += util.token_to_swechar(token)
+            else:
+                line += chr(token)
         elif token == 12:
             line += "&H%X" % read_word(bytes, pos)
             pos += 2
@@ -86,8 +90,9 @@ def detokenize_line(bytes):
                 pos += 1
             if token == 0xe6:
                 # When using apostroph as comments, it's encoded :REM'
-                # We nee to remove the previous four characters to get same decoding
-                # TODO: THere's something more to this. The rest of the characters are never tokens?
+                # We need to remove the previous four characters to get same decoding
+                # TODO: There's something more to this. The rest of the characters are never tokens?
+                logging.warning("Apostroph comments")
                 line = "%s'" % line[:-4]
             else:
                 s = TOKENS[token]
@@ -126,11 +131,11 @@ TOKENS = [
 ]
 
 def main():
-    disk = Disk('/Users/yarin/Dropbox/SVI/Disk/tokentest.dsk')
+    disk = Disk('/Users/yarin/Dropbox/SVI/ripped/disk/musik.dsk')
     data = disk.read_file('rem')
     lines = detokenize(data)
     for line in lines:
-        print line
+        print(line)
 
 if __name__ == "__main__":
     main()

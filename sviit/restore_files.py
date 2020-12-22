@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from disk import Disk
+from sviit.disk import Disk
 
 def main():
     disk = Disk(sys.argv[1])
